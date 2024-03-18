@@ -1,0 +1,35 @@
+﻿Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.Try
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+'TJS, Mar 2021
+'MUM Industries
+'This program is to run on the task schduler and fire every hour. It will call GCG_6284_WATCHDOG.g2u if it is not already running.
+V.Local.sWatchPid.Declare
+V.Local.sCurPid.Declare
+V.Local.sPath.Declare
+V.Local.bPidChk.Declare
+
+F.Intrinsic.String.Build("{0}\CUSTOM\6284\GCG_6284_PID.pid",V.Caller.GlobalDir,V.Local.sWatchPid)
+
+F.Intrinsic.File.File2String(V.Local.sWatchPid,V.Local.sCurPid)
+
+F.Intrinsic.Task.PIDRunning(V.Local.sCurPid,V.Local.bPidChk)
+
+F.Intrinsic.String.Build("{0}GCG_6284_WATCHDOG.g2u",V.Caller.GasDir,V.Local.sPath)
+
+F.Intrinsic.Control.If(V.Local.bPidChk,=,False)
+	F.Global.General.CallAsyncGAS(V.Local.sGCG,V.Local.sPath)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(Error,"SubRoutine",V.Ambient.CurrentSubroutine,"eNumber",V.Ambient.ErrorNumber,"eDescription",V.Ambient.ErrorDescription)
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$tsmith$}$20210301130045279$}$xqPbj9atw05FglvzeFsZ9cqXP+qvG6tXqEus6GdmQ9GV477t3feB6WPbXUGbHRBU/BIncTEckAc=
+Program.Sub.Comments.End
