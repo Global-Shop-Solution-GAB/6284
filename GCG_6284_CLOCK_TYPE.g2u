@@ -1,0 +1,189 @@
+﻿Program.Sub.ScreenSU.Start
+Gui.fmClockType..Create(BaseForm)
+Gui.fmClockType..Caption("Clock Type")
+Gui.fmClockType..Size(318,145)
+Gui.fmClockType..MinX(0)
+Gui.fmClockType..MinY(0)
+Gui.fmClockType..Position(0,0)
+Gui.fmClockType..AlwaysOnTop(True)
+Gui.fmClockType..FontName("Tahoma")
+Gui.fmClockType..FontSize(8.25)
+Gui.fmClockType..ControlBox(False)
+Gui.fmClockType..MaxButton(False)
+Gui.fmClockType..MinButton(False)
+Gui.fmClockType..MousePointer(0)
+Gui.fmClockType..Moveable(False)
+Gui.fmClockType..Sizeable(False)
+Gui.fmClockType..ShowInTaskBar(True)
+Gui.fmClockType..TitleBar(True)
+Gui.fmClockType..BackColor(-2147483633)
+Gui.fmClockType..Event(UnLoad,fmClockType_UnLoad)
+Gui.fmClockType..ShowCompanyCode(False)
+Gui.fmClockType.lblMsg.Create(Label,"Label",True,44,19,0,10,14,True,0,"Tahoma",12,,0,0)
+Gui.fmClockType.lblMsg.BorderStyle(0)
+Gui.fmClockType.lblMsg.FontStyle(True,False,False,False,False)
+Gui.fmClockType.cboType.Create(ComboBox)
+Gui.fmClockType.cboType.Enabled(True)
+Gui.fmClockType.cboType.Visible(True)
+Gui.fmClockType.cboType.Zorder(0)
+Gui.fmClockType.cboType.Size(299,26)
+Gui.fmClockType.cboType.Position(10,37)
+Gui.fmClockType.cboType.FontName("Tahoma")
+Gui.fmClockType.cboType.FontSize(12)
+Gui.fmClockType.cboType.FontStyle(True,False,False,False,False)
+Gui.fmClockType.cmdOK.Create(Button)
+Gui.fmClockType.cmdOK.Enabled(True)
+Gui.fmClockType.cmdOK.Visible(True)
+Gui.fmClockType.cmdOK.Zorder(0)
+Gui.fmClockType.cmdOK.Size(75,23)
+Gui.fmClockType.cmdOK.Position(122,75)
+Gui.fmClockType.cmdOK.Caption("OK")
+Gui.fmClockType.cmdOK.FontName("Tahoma")
+Gui.fmClockType.cmdOK.FontSize(12)
+Gui.fmClockType.cmdOK.FontStyle(True,False,False,False,False)
+Gui.fmClockType.cmdOK.Event(Click,cmdOK_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+V.Global.sDateTS.Declare
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.Try
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+'TJS, April 2021
+'MUM INdustries
+'VT addition to 6284 Paycom upload
+'This script was added to provide a means of capturing clock in and out types.
+'15923 - GUI Clock in 
+'15922 - GUI Clock out
+'V.Passed.009993 - Employee ID
+'CLOCK_TYPES: SOS = Start of Shift, EOS = End of Shift, LUNCH
+
+V.Local.sDate.Declare
+V.Local.sSQL.Declare
+
+F.Intrinsic.String.Format(V.Ambient.Date,"YYYYMMDD",V.Local.sDate)
+
+V.Global.sDateTS.Set(V.Passed.009995)
+
+'F.Intrinsic.Control.If(V.Caller.CompanyCode,=,"STX","OR",V.Caller.CompanyCode,=,"PLX")
+'	F.Intrinsic.Math.Sub(V.Global.sDateTime,180,V.Global.sDateTime)
+'F.Intrinsic.Control.EndIf
+
+'F.Intrinsic.Control.If(V.Caller.CompanyCode,=,"STX","OR",V.Caller.CompanyCode,=,"PLX")
+'	F.Intrinsic.Date.DateAdd("H",-3,V.Local.dDate,V.Local.dDate)
+'F.Intrinsic.Control.EndIf
+
+'F.Intrinsic.Date.DateDiff("N","1/1/1968",V.Ambient.Now,V.Global.sDateTS)
+
+F.Intrinsic.Control.SelectCase(V.Caller.Hook)
+	F.Intrinsic.Control.Case(15923)
+	
+		F.ODBC.Connection!conts.OpenCompanyConnection
+		F.Intrinsic.String.Build("select * from EMP_IN_PROCESS_G where EMPLOYEE = '{0}'",V.Passed.009993,V.Local.sSQL)
+		
+		F.ODBC.Connection!conts.ExecuteAndReturn(V.Local.sSQL,V.Local.sSQL)
+		
+		F.Intrinsic.Control.If(V.Local.sSQL.Trim,<>,"")
+			'F.Intrinsic.Control.End
+		F.Intrinsic.Control.EndIf
+		
+		Gui.fmClockType.lblMsg.Caption("Please select a clock in type")
+		Gui.fmClockType.cboType.AddItem("Start of shift")
+		Gui.fmClockType.cboType.AddItem("Back from lunch")
+		
+		F.Intrinsic.String.Build("select B.IN_OUT from TIME_ATTENDANCE A left join GCG_6284_CLOCK_TYPE B on A.EMPLOYEE = B.EMPLOYEE and A.IN_TS_MIN = B.TS_MIN where A.EMPLOYEE = '{0}' and A.CHARGE_DATE = '{1}' and RTRIM(B.CLOCK_TYPE) = 'SOS' and A.TIME_OUT <> '000000'",V.Passed.009993,V.Local.sDate,V.Local.sSQL)
+
+		
+			F.ODBC.Connection!conts.ExecuteAndReturn(V.Local.sSQL,V.Local.sSQL)
+		F.ODBC.Connection!conts.Close
+		
+		F.Intrinsic.Control.If(V.Local.sSQL.Trim,=,"IN")
+			F.Intrinsic.Control.End
+		F.Intrinsic.Control.EndIf
+
+	F.Intrinsic.Control.Case(15922)
+		Gui.fmClockType.lblMsg.Caption("Please select a clock out type")
+		Gui.fmClockType.cboType.AddItem("End of shift")
+		Gui.fmClockType.cboType.AddItem("Going to lunch")
+F.Intrinsic.Control.EndSelect
+
+Gui.fmClockType..Show
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(Error,"SubRoutine",V.Ambient.CurrentSubroutine,"eNumber",V.Ambient.ErrorNumber,"eDescription",V.Ambient.ErrorDescription)
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.cmdOK_Click.Start
+F.Intrinsic.Control.Try
+V.Local.sInOut.Declare
+V.Local.sClockType.Declare
+V.Local.sEmp.Declare
+V.Local.sSQL.Declare
+
+F.Intrinsic.Control.If(V.Screen.fmClockType!cboType.Value.Trim,=,"")
+	F.Intrinsic.UI.Msgbox("Please select a clock type","Error")
+	F.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.SelectCase(V.Caller.Hook)
+	F.Intrinsic.Control.Case(15923)
+		V.Local.sEmp.Set(V.Passed.009993.Trim)
+		V.Local.sInOut.Set("IN")
+		F.Intrinsic.Control.SelectCase(V.Screen.fmClockType!cboType.Value)
+			F.Intrinsic.Control.Case("Start of shift")
+				V.Local.sClockType.Set("SOS")
+			F.Intrinsic.Control.Case("Back from lunch")
+				V.Local.sClockType.Set("LUNCH")
+			F.Intrinsic.Control.CaseElse
+				F.Intrinsic.UI.Msgbox("Please select an available option","Error!")
+				F.Intrinsic.Control.ExitSub
+		F.Intrinsic.Control.EndSelect
+			
+	F.Intrinsic.Control.Case(15922)
+		V.Local.sEmp.Set(V.Passed.009993.Trim)
+		V.Local.sInOut.Set("OUT")
+		F.Intrinsic.Control.SelectCase(V.Screen.fmClockType!cboType.Value)
+			F.Intrinsic.Control.Case("End of shift")
+				V.Local.sClockType.Set("EOS")	
+			F.Intrinsic.Control.Case("Going to lunch")
+				V.Local.sClockType.Set("LUNCH")
+			F.Intrinsic.Control.CaseElse
+				F.Intrinsic.UI.Msgbox("Please select an available option","Error!")
+				F.Intrinsic.Control.ExitSub
+		F.Intrinsic.Control.EndSelect
+F.Intrinsic.Control.EndSelect
+
+F.Intrinsic.String.Build("Insert into GCG_6284_CLOCK_TYPE (EMPLOYEE,TS_MIN,IN_OUT,CLOCK_TYPE) values('{0}','{1}','{2}','{3}')",V.Local.sEmp,V.Global.sDateTS,V.Local.sInOut,V.Local.sClockType.Trim,V.Local.sSQL)
+
+F.ODBC.Connection!conts.OpenCompanyConnection
+F.ODBC.Connection!conts.Execute(V.Local.sSQL)
+F.ODBC.Connection!conts.Close
+
+F.Intrinsic.Control.CallSub(fmClockType_UnLoad)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(Error,"SubRoutine",V.Ambient.CurrentSubroutine,"eNumber",V.Ambient.ErrorNumber,"eDescription",V.Ambient.ErrorDescription)
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdOK_Click.End
+
+Program.Sub.fmClockType_UnLoad.Start
+F.Intrinsic.Control.End
+Program.Sub.fmClockType_UnLoad.End
+
+Program.Sub.Error.Start
+V.Local.sError.Declare
+V.Local.iRet.Declare
+V.Local.sSep.Declare
+
+F.Intrinsic.String.Build("-------------------------------------------------------------------------------------",,V.Local.sSep)
+F.Intrinsic.String.Build("({5}-{6}){0}{7}{0}Project: {4}{0}{7}{0}Sub: {1}{0}Error: {2}, {3}", V.Ambient.NewLine, V.Args.SubRoutine, V.Args.eNumber, V.Args.eDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sSep,V.Local.sError)
+F.Intrinsic.UI.Msgbox(V.Local.sError,"Error",V.Local.iRet)
+Program.Sub.Error.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$tsmith$}$20220329133805684$}$xqPbj9atw05FglvzeFsZ9cqXP+qvG6tX8M+V8zm+o40UouG3xl5UkOqGwCCr0DHS0ftAGmATte0=
+Program.Sub.Comments.End
