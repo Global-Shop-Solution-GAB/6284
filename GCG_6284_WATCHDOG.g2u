@@ -1,0 +1,120 @@
+﻿Program.Sub.ScreenSU.Start
+Gui.fmWatch..Create(BaseForm)
+Gui.fmWatch..Caption("Paycom Payroll Transfer Watchdog (6284)")
+Gui.fmWatch..Size(393,136)
+Gui.fmWatch..MinX(0)
+Gui.fmWatch..MinY(0)
+Gui.fmWatch..Position(0,0)
+Gui.fmWatch..AlwaysOnTop(False)
+Gui.fmWatch..FontName("Tahoma")
+Gui.fmWatch..FontSize(8.25)
+Gui.fmWatch..ControlBox(True)
+Gui.fmWatch..MaxButton(True)
+Gui.fmWatch..MinButton(True)
+Gui.fmWatch..MousePointer(0)
+Gui.fmWatch..Moveable(True)
+Gui.fmWatch..Sizeable(True)
+Gui.fmWatch..ShowInTaskBar(True)
+Gui.fmWatch..TitleBar(True)
+Gui.fmWatch..Event(UnLoad,fmWatch_UnLoad)
+Gui.fmWatch.lblRT.Create(Label,"Last Run Time",True,90,16,0,93,9,True,0,"Tahoma",10,,0,0)
+Gui.fmWatch.lblRT.BorderStyle(0)
+Gui.fmWatch.lblRT.FontStyle(True,False,False,False,False)
+Gui.fmWatch.lblNR.Create(Label,"Next run in",True,70,16,0,93,30,True,0,"Tahoma",10,,0,0)
+Gui.fmWatch.lblNR.BorderStyle(0)
+Gui.fmWatch.lblNR.FontStyle(True,False,False,False,False)
+Gui.fmWatch.lblLasRun.Create(Label,"Last Run",True,49,16,0,194,9,True,0,"Tahoma",10,,0,0)
+Gui.fmWatch.lblLasRun.BorderStyle(0)
+Gui.fmWatch.lblNexRunIn.Create(Label,"900",True,41,16,0,169,30,True,2,"Tahoma",10,,0,1)
+Gui.fmWatch.lblNexRunIn.BorderStyle(0)
+Gui.fmWatch.lblNexRunIn.ForeColor(255)
+Gui.fmWatch.lblNexRunIn.FontStyle(True,False,False,False,False)
+Gui.fmWatch.lblSec.Create(Label,"seconds.",True,57,16,0,214,30,True,0,"Tahoma",10,,0,0)
+Gui.fmWatch.lblSec.BorderStyle(0)
+Gui.fmWatch.lblSec.FontStyle(True,False,False,False,False)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.Try
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+'TJS, Mar 2021
+'MUM Industries
+'This program is called from GCG_6284_TASK.g2u running hourly from the task scheduler.
+'When launched, this program will call GCG_6284_PAYROLL_XFER.g2u every 15 minutes for 
+'three iterations to collect payroll data and send it to Paycom's SFTP site.
+'It will then shutdown.
+V.Local.iRet.Declare
+V.Local.iStrt.Declare(Long,900)
+V.Local.iEnd.Declare
+V.Local.iCnt.Declare
+V.Local.sGCG.Declare
+V.Local.iCurPid.Declare
+V.Local.iLastPid.Declare
+V.Local.bPidChk.Declare
+V.Local.sWatchPid.Declare
+
+F.Intrinsic.String.Build("{0}\CUSTOM\6284\GCG_6284_PID.pid",V.Caller.GlobalDir,V.Local.sWatchPid)
+
+F.Intrinsic.File.String2File(V.Local.sWatchPid,V.Ambient.PID)
+
+Gui.fmWatch..Show
+
+F.ODBC.Connection!conts.OpenCompanyConnection
+
+F.Intrinsic.String.Build("{0}GCG_6284_PAYROLL_XFER.g2u",V.Caller.GasDir,V.Local.sGCG)
+
+F.Intrinsic.Control.For(V.Local.iCnt,1,3,1)
+
+	F.ODBC.Connection!conts.ExecuteAndReturn("Select LAST_PID from GCG_6284_SETTINGS where REC_ID = '1'",V.Local.iLastPid)
+	
+	F.Intrinsic.Task.PIDRunning(V.Local.iLastPid,V.Local.bPidChk)
+
+	F.Intrinsic.Control.If(V.Local.bPidChk,<>,True)
+		F.Global.General.CallAsyncGAS(V.Local.sGCG,V.Local.iCurPid)
+		F.Intrinsic.String.Build("Update GCG_6284_SETTINGS set LAST_PID = '{0}' where REC_ID = '1'",V.Local.iCurPid)
+	F.Intrinsic.Control.EndIf
+
+	Gui.fmWatch.lblLasRun.Caption(V.Ambient.Now)
+	F.Intrinsic.Debug.TimerStart(LAUNCH)
+	
+	F.Intrinsic.Control.DoUntil(V.Local.iRet,=,V.Local.iStrt)
+		F.Intrinsic.Debug.TimerElapsed("LAUNCH",V.Local.iRet)
+		F.Intrinsic.Math.Sub(V.Local.iStrt,V.Local.iRet,V.Local.iEnd)
+		
+		Gui.fmWatch.lblNexRunIn.Caption(V.Local.iEnd)
+	F.Intrinsic.Control.Loop
+	
+	V.Local.iRet.Set(0)
+	
+F.Intrinsic.Control.Next(V.Local.iCnt)
+
+F.ODBC.Connection!conts.Close
+
+F.Intrinsic.Control.CallSub(fmWatch_UnLoad)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(Error,"SubRoutine",V.Ambient.CurrentSubroutine,"eNumber",V.Ambient.ErrorNumber,"eDescription",V.Ambient.ErrorDescription)
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.fmWatch_UnLoad.Start
+F.Intrinsic.Control.End
+Program.Sub.fmWatch_UnLoad.End
+
+Program.Sub.Error.Start
+V.Local.sError.Declare
+V.Local.iRet.Declare
+V.Local.sSep.Declare
+
+F.Intrinsic.String.Build("-------------------------------------------------------------------------------------",,V.Local.sSep)
+F.Intrinsic.String.Build("({5}-{6}){0}{7}{0}Project: {4}{0}{7}{0}Sub: {1}{0}Error: {2}, {3}", V.Ambient.NewLine, V.Args.SubRoutine, V.Args.eNumber, V.Args.eDescription,V.Caller.ScriptFile,V.Ambient.Date, V.Ambient.Time,V.Local.sSep,V.Local.sError)
+F.Intrinsic.UI.Msgbox(V.Local.sError,"Error",V.Local.iRet)
+Program.Sub.Error.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$tsmith$}$20210301125903280$}$xqPbj9atw05FglvzeFsZ9cqXP+qvG6tXqEus6GdmQ9GDlYUTPMJtl4DgNyT5SsnN+k/PcynWS3E=
+Program.Sub.Comments.End
